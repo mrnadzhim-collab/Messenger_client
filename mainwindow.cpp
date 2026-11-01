@@ -74,8 +74,6 @@ void MainWindow::onUsersReceived(const QJsonArray &users)
                      o[JSON_FIELDS::F_NAME].toString(),
                      o[JSON_FIELDS::F_USERNAME].toString(),
                      o[JSON_FIELDS::F_ONLINE].toBool());
-
-        m_net->requestHistory(o[JSON_FIELDS::F_ID].toVariant().toLongLong());
     }
     rebuildChats();
 }
