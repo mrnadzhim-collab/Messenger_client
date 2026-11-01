@@ -51,6 +51,15 @@ void MainWindow::setupUI()
     connect(m_net, &NetClient::usersReceived, this, &MainWindow::onUsersReceived);
     connect(m_net, &NetClient::serverError, this, &MainWindow::serverError);
     connect(m_net, &NetClient::historyReceived, this, &MainWindow::onHistoryReceived);
+    connect(m_net, &NetClient::messageAck, this, &MainWindow::onAck);
+    connect(m_net, &NetClient::incomingMessage, this, &MainWindow::onIncoming);
+    connect(m_net, &NetClient::readReceipt, this, &MainWindow::onReadReceipt);
+    connect(m_net, &NetClient::presenceChanged, this, &MainWindow::onPresence);
+    connect(m_net, &NetClient::deliveredReceipt, this, &MainWindow::onDelivered);
+    connect(m_net, &NetClient::pendingMessages, this, &MainWindow::onPending);
+
+    connect(m_ui->pushButton_clearAttach, &QPushButton::clicked, this, &MainWindow::clearAttach);
+    connect(m_ui->pushButton_send, &QPushButton::clicked, this, &MainWindow::sendCurrent);
 
     connect(m_ui->listWidget_chatList, &QListWidget::itemClicked, this, [this](QListWidgetItem *item){
         openChat(item->data(Qt::UserRole).toLongLong());
@@ -204,5 +213,159 @@ void MainWindow::rebuildMessages()
         m_ui->listWidget_msgList->setItemWidget(item, w);
     }
     m_ui->listWidget_msgList->scrollToBottom();
+}
+
+void MainWindow::sendCurrent()
+{
+    if (m_current < 0)
+        return;
+
+    const QString text = m_ui->lineEdit_input->text().trimmed();
+
+    QString fileName = "";
+    QByteArray fileData;;
+
+    if (text.isEmpty())
+        return;
+
+    Message m;
+    m.cid = m_nextCid++;
+    m.from = m_myId;
+    m.outgoing = true;
+    m.text = text;
+    m.fileName = fileName;
+    m.hasFile = !fileName.isEmpty();
+    m.ts = QDateTime::currentSecsSinceEpoch();
+    m.status = 0;
+    if (m.hasFile)
+        m.localPath = m_attachPath;
+
+    Chat &c = ensureChat(m_current);
+    c.msgs.append(m);
+    if (m.ts > c.lastTs) c.lastTs = m.ts;
+
+    m_net->sendMessage(m_current, text, fileName, fileData, m.cid);
+    m_ui->lineEdit_input->clear();
+    clearAttach();
+    rebuildMessages();
+    rebuildChats();
+}
+
+void MainWindow::clearAttach()
+{
+    m_attachPath.clear();
+    m_ui->attachLabel->clear();
+    m_ui->attachRow->setVisible(false);
+}
+
+void MainWindow::onIncoming(const QJsonObject &msg)
+{
+    addIncomingMessage(msg, true);
+}
+
+void MainWindow::onAck(qint64 cid, qint64 id, qint64 ts, bool delivered, qint64 to)
+{
+    if (!m_chats.contains(to))
+        return;
+    Chat &c = m_chats[to];
+    for (int i = 0; i < c.msgs.size(); ++i) {
+        if (c.msgs[i].cid == cid) {
+            c.msgs[i].id = id;
+            c.msgs[i].ts = ts;
+            c.msgs[i].status = delivered ? 2 : 1;
+            break;
+        }
+    }
+    if (m_current == to)
+        rebuildMessages();
+    else
+        rebuildChats();
+}
+
+void MainWindow::addIncomingMessage(const QJsonObject &o, bool countUnread)
+{
+    const qint64 from = o[JSON_FIELDS::F_FROM].toVariant().toLongLong();
+    Chat &c = ensureChat(from);
+    Message m;
+    m.id = o[JSON_FIELDS::F_ID].toVariant().toLongLong();
+    m.from = from;
+    m.text = o[JSON_FIELDS::F_TEXT].toString();
+    m.fileName = o[JSON_FIELDS::F_FILENAME].toString();
+    m.hasFile = o[JSON_FIELDS::F_HASFILE].toBool();
+    m.ts = o[JSON_FIELDS::F_TS].toVariant().toLongLong();
+    if (m.hasFile) {
+        QString candidate = m_filesDir + "/" + QString::number(m.id) + "_" + m.fileName;
+        if (QFile::exists(candidate))
+            m.localPath = candidate;
+    }
+    c.msgs.append(m);
+    if (m.ts > c.lastTs) c.lastTs = m.ts;
+
+    if (m_current == from) {
+        m_net->sendRead(from, QVector<qint64>() << m.id);
+        rebuildMessages();
+    } else if (countUnread) {
+        c.unread++;
+    }
+    rebuildChats();
+}
+
+void MainWindow::onReadReceipt(qint64 fromId, const QJsonArray &ids)
+{
+    if (!m_chats.contains(fromId))
+        return;
+    QSet<qint64> idSet;
+    for (const QJsonValue &v : ids)
+        idSet.insert(v.toVariant().toLongLong());
+    Chat &c = m_chats[fromId];
+    for (Message &m : c.msgs)
+        if (m.outgoing && idSet.contains(m.id))
+            m.status = 3;
+    if (m_current == fromId)
+        rebuildMessages();
+    else
+        rebuildChats();
+}
+
+void MainWindow::onPresence(qint64 userId, bool online)
+{
+    if (!m_chats.contains(userId)) {
+        m_net->requestUsers();
+        return;
+    }
+    Chat &c = m_chats[userId];
+    c.online = online;
+    if (m_current == userId)
+        updateHeader();
+    rebuildChats();
+}
+
+void MainWindow::onDelivered(const QJsonArray &ids)
+{
+    QSet<qint64> idSet;
+    for (const QJsonValue &v : ids)
+        idSet.insert(v.toVariant().toLongLong());
+    bool currentChanged = false;
+    for (auto it = m_chats.begin(); it != m_chats.end(); ++it) {
+        bool changed = false;
+        for (Message &m : it.value().msgs) {
+            if (m.outgoing && idSet.contains(m.id) && m.status < 2) {
+                m.status = 2;
+                changed = true;
+            }
+        }
+        if (changed && m_current == it.key())
+            currentChanged = true;
+    }
+    if (currentChanged)
+        rebuildMessages();
+    else
+        rebuildChats();
+}
+
+void MainWindow::onPending(const QJsonArray &msgs)
+{
+    for (const QJsonValue &v : msgs)
+        addIncomingMessage(v.toObject(), true);
 }
 

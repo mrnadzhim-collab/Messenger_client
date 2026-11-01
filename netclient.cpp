@@ -25,6 +25,22 @@ void NetClient::parse(const QJsonObject &obj)
         emit usersReceived(obj[JSON_FIELDS::F_LIST].toArray());
     } else if (type == JSON_MESSEGES::M_HISTORY) {
         emit historyReceived(obj[JSON_FIELDS::F_PEER].toVariant().toLongLong(), obj[JSON_FIELDS::F_MSGS].toArray());
+    } else if (type == JSON_MESSEGES::M_MSG) {
+        emit incomingMessage(obj[JSON_FIELDS::F_MSG].toObject());
+    } else if (type == JSON_MESSEGES::M_MSG_ACK) {
+        emit messageAck(obj[JSON_FIELDS::F_CID].toVariant().toLongLong(),
+                        obj[JSON_FIELDS::F_ID].toVariant().toLongLong(),
+                        obj[JSON_FIELDS::F_TS].toVariant().toLongLong(),
+                        obj[JSON_FIELDS::F_DELIVERED].toBool(),
+                        obj[JSON_FIELDS::F_TO].toVariant().toLongLong());
+    } else if (type == JSON_MESSEGES::M_READ) {
+        emit readReceipt(obj[JSON_FIELDS::F_PEER].toVariant().toLongLong(), obj[JSON_FIELDS::F_IDS].toArray());
+    } else if (type == JSON_MESSEGES::M_PRESENCE) {
+        emit presenceChanged(obj[JSON_FIELDS::F_ID].toVariant().toLongLong(), obj[JSON_FIELDS::F_ONLINE].toBool());
+    } else if (type == JSON_MESSEGES::M_DELIVERED) {
+        emit deliveredReceipt(obj[JSON_FIELDS::F_IDS].toArray());
+    } else if (type == JSON_MESSEGES::M_PENDING) {
+        emit pendingMessages(obj[JSON_FIELDS::F_MSGS].toArray());
     }
 }
 
@@ -113,6 +129,29 @@ void NetClient::requestHistory(qint64 peer)
     QJsonObject o;
     o[JSON_FIELDS::F_TYPE] = JSON_MESSEGES::M_HISTORY;
     o[JSON_FIELDS::F_PEER] = (double)peer;
+    send(o);
+}
+
+void NetClient::sendMessage(qint64 to, const QString &text, const QString &fileName, const QByteArray &fileData, qint64 cid)
+{
+    QJsonObject o;
+    o[JSON_FIELDS::F_TYPE] = JSON_MESSEGES::M_MSG;
+    o[JSON_FIELDS::F_TO] = (double)to;
+    o[JSON_FIELDS::F_TEXT] = text;
+    o[JSON_FIELDS::F_FILENAME] = fileName;
+    o[JSON_FIELDS::F_FILE_B64] = fileData.isEmpty() ? QString() : QString::fromUtf8(fileData.toBase64());
+    o[JSON_FIELDS::F_CID] = (double)cid;
+    send(o);
+}
+
+void NetClient::sendRead(qint64 peer, const QVector<qint64> &ids)
+{
+    QJsonArray a;
+    for (qint64 id : ids) a.append((double)id);
+    QJsonObject o;
+    o[JSON_FIELDS::F_TYPE] = JSON_MESSEGES::M_READ;
+    o[JSON_FIELDS::F_PEER] = (double)peer;
+    o[JSON_FIELDS::F_IDS] = a;
     send(o);
 }
 

@@ -19,6 +19,9 @@ public:
     void registerUser(const QString &username, const QString &password, const QString &name);
     void requestUsers();
     void requestHistory(qint64 peer);
+    void sendMessage(qint64 to, const QString &text, const QString &fileName,
+                     const QByteArray &fileData, qint64 cid);
+    void sendRead(qint64 peer, const QVector<qint64> &ids);
 
 private:
     void parse(const QJsonObject &obj);
@@ -43,6 +46,12 @@ signals:
     void serverError(const QString &msg);
     void usersReceived(const QJsonArray &users);
     void historyReceived(qint64 peer, const QJsonArray &msgs);
+    void incomingMessage(const QJsonObject &msg);
+    void messageAck(qint64 cid, qint64 id, qint64 ts, bool delivered, qint64 to);
+    void readReceipt(qint64 fromId, const QJsonArray &ids);
+    void presenceChanged(qint64 userId, bool online);
+    void deliveredReceipt(const QJsonArray &ids);
+    void pendingMessages(const QJsonArray &msgs);
 };
 
 #endif // NETCLIENT_H

@@ -46,9 +46,11 @@ private:
     Chat &ensureChat(qint64 id);
     void addUserEntry(qint64 id, const QString &name, const QString &username, bool online);
     QString chatPreview(const Chat &c) const;
+    void addIncomingMessage(const QJsonObject &o, bool countUnread);
     void rebuildChats();
     void rebuildMessages();
     void updateHeader();
+    void clearAttach();
 
     Ui::MainWindow *m_ui;
 
@@ -57,7 +59,8 @@ private:
     QString m_myName;
     QMap<qint64, Chat> m_chats;
     qint64 m_current = -1;
-
+    qint64 m_nextCid = 1;
+    QString m_attachPath;
     QString m_filesDir;
 
 private slots:
@@ -65,5 +68,12 @@ private slots:
     void serverError(const QString &msg);
     void openChat(qint64 peer);
     void onHistoryReceived(qint64 peer, const QJsonArray &msgs);
+    void sendCurrent();
+    void onIncoming(const QJsonObject &msg);
+    void onAck(qint64 cid, qint64 id, qint64 ts, bool delivered, qint64 to);
+    void onReadReceipt(qint64 fromId, const QJsonArray &ids);
+    void onPresence(qint64 userId, bool online);
+    void onDelivered(const QJsonArray &ids);
+    void onPending(const QJsonArray &msgs);
 };
 #endif // MAINWINDOW_H
