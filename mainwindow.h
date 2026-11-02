@@ -3,6 +3,8 @@
 
 #include <QMainWindow>
 
+#include "netclient.h"
+
 QT_BEGIN_NAMESPACE
 namespace Ui {
 class MainWindow;
@@ -14,19 +16,12 @@ class MainWindow : public QMainWindow
     Q_OBJECT
 
 public:
-    MainWindow(QWidget *parent = nullptr);
+    MainWindow(NetClient *net, const QJsonObject &user, QWidget *parent = nullptr);
     ~MainWindow();
 
 private:
-    void setupUI();
-
     Ui::MainWindow *m_ui;
 
-    bool m_registerMode = false;
-
-private slots:
-    void on_auth();
-    void on_switchMode();
-    void on_showError(const QString &msg);
+    NetClient *m_net;
 };
 #endif // MAINWINDOW_H

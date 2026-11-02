@@ -13,12 +13,17 @@ TARGET = client
 TEMPLATE = app
 
 SOURCES += \
+    loginwindow.cpp \
     main.cpp \
-    mainwindow.cpp
+    mainwindow.cpp \
+    netclient.cpp
 
 HEADERS += \
+    loginwindow.h \
     mainwindow.h \
+    netclient.h \
     protocol.h
 
 FORMS += \
+    loginwindow.ui \
     mainwindow.ui
