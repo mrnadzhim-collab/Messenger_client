@@ -9,6 +9,13 @@ LoginWindow::LoginWindow(NetClient *net, QWidget *parent)
     m_ui->setupUi(this);
 
     setupUI();
+
+    connect(m_net, &NetClient::authOk, this, [this](const QJsonObject &user){
+        emit authSuccess(user);
+        close();
+    });
+    connect(m_net, &NetClient::serverError, this, &LoginWindow::on_showError);
+    connect(m_net, &NetClient::connectionFailed, this, &LoginWindow::on_showError);
 }
 
 LoginWindow::~LoginWindow()
@@ -21,6 +28,7 @@ void LoginWindow::setupUI()
     setFixedSize(360, 480);
 
     m_ui->lineEdit_name->setVisible(false);
+    m_ui->label_error->setVisible(false);
 
     connect(m_ui->pushButton_action, SIGNAL(clicked(bool)), this, SLOT(on_auth()));
     connect(m_ui->pushButton_switch, SIGNAL(clicked(bool)), this, SLOT(on_switchMode()));
@@ -28,7 +36,24 @@ void LoginWindow::setupUI()
 
 void LoginWindow::on_auth()
 {
-
+    const QString username = m_ui->lineEdit_username->text().trimmed();
+    const QString password = m_ui->lineEdit_password->text();
+    if (username.isEmpty() || password.isEmpty()) {
+        on_showError(QString("Введите логин и пароль"));
+        return;
+    }
+    if (m_registerMode && m_ui->lineEdit_name->text().trimmed().isEmpty()) {
+        on_showError(QString("Введите имя"));
+        return;
+    }
+    m_ui->label_error->setVisible(false);
+    m_ui->pushButton_action->setEnabled(false);
+    m_ui->pushButton_action->setText(QString("Подключение..."));
+    m_net->connectToServer(m_ui->lineEdit_host->text().trimmed(), (quint16)m_ui->lineEdit_port->text().toUShort());
+    if (m_registerMode)
+        m_net->registerUser(username, password, m_ui->lineEdit_name->text().trimmed());
+    else
+        m_net->login(username, password);
 }
 
 void LoginWindow::on_switchMode()
