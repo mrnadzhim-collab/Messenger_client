@@ -9,7 +9,6 @@
 
 namespace Protocol {
 
-// Кадр: 4 байта длины (big-endian) + JSON
 inline QByteArray encode(const QJsonObject &obj)
 {
     QByteArray payload = QJsonDocument(obj).toJson(QJsonDocument::Compact);
@@ -20,7 +19,6 @@ inline QByteArray encode(const QJsonObject &obj)
     return frame;
 }
 
-// Извлекает все полные пакеты из буфера, остаток остаётся в буфере
 inline QList<QJsonObject> decode(QByteArray &buffer)
 {
     QList<QJsonObject> out;

@@ -18,6 +18,15 @@ public:
     ~MainWindow();
 
 private:
-    Ui::MainWindow *ui;
+    void setupUI();
+
+    Ui::MainWindow *m_ui;
+
+    bool m_registerMode = false;
+
+private slots:
+    void on_auth();
+    void on_switchMode();
+    void on_showError(const QString &msg);
 };
 #endif // MAINWINDOW_H
