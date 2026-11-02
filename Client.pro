@@ -17,7 +17,8 @@ SOURCES += \
     mainwindow.cpp
 
 HEADERS += \
-    mainwindow.h
+    mainwindow.h \
+    protocol.h
 
 FORMS += \
     mainwindow.ui
