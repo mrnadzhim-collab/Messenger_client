@@ -17,9 +17,9 @@ NetClient::NetClient(QObject *parent)
 void NetClient::parse(const QJsonObject &obj)
 {
     const QString type = obj[JSON_FIELDS::F_TYPE].toString();
-    if (type == JSON_MESSAGES::M_AUTH_OK) {
+    if (type == JSON_MESSEGES::M_AUTH_OK) {
         emit authOk(obj[JSON_FIELDS::F_USER].toObject());
-    } else if (type == JSON_MESSAGES::M_ERROR) {
+    } else if (type == JSON_MESSEGES::M_ERROR) {
         emit serverError(obj[JSON_FIELDS::F_MSG].toString());
     }
 }
@@ -79,7 +79,7 @@ void NetClient::connectToServer(const QString &host, quint16 port)
 void NetClient::login(const QString &username, const QString &password)
 {
     QJsonObject o;
-    o[JSON_FIELDS::F_TYPE] = JSON_MESSAGES::M_LOGIN;
+    o[JSON_FIELDS::F_TYPE] = JSON_MESSEGES::M_LOGIN;
     o[JSON_FIELDS::F_USERNAME] = username;
     o[JSON_FIELDS::F_PASSWORD] = password;
     m_auth = o;
@@ -89,7 +89,7 @@ void NetClient::login(const QString &username, const QString &password)
 void NetClient::registerUser(const QString &username, const QString &password, const QString &name)
 {
     QJsonObject o;
-    o[JSON_FIELDS::F_TYPE] = JSON_MESSAGES::M_REGISTER;
+    o[JSON_FIELDS::F_TYPE] = JSON_MESSEGES::M_REGISTER;
     o[JSON_FIELDS::F_USERNAME] = username;
     o[JSON_FIELDS::F_PASSWORD] = password;
     o[JSON_FIELDS::F_NAME] = name;
