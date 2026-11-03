@@ -16,6 +16,7 @@ SOURCES += \
     loginwindow.cpp \
     main.cpp \
     mainwindow.cpp \
+    messagewidget.cpp \
     netclient.cpp
 
 HEADERS += \
@@ -23,6 +24,7 @@ HEADERS += \
     chatitemwidget.h \
     loginwindow.h \
     mainwindow.h \
+    messagewidget.h \
     messegedata.h \
     netclient.h \
     protocol.h \

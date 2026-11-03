@@ -27,4 +27,12 @@ inline QString fmtMsgTime(qint64 ts)
     return dt.toString(QStringLiteral("dd.MM.yy hh:mm"));
 }
 
+enum MessageStatus
+{
+    Pended          = 0,
+    Sended          = 1,
+    Delivered       = 2,
+    Readed          = 3
+};
+
 #endif // MESSEGEDATA_H

@@ -47,6 +47,8 @@ private:
     void addUserEntry(qint64 id, const QString &name, const QString &username, bool online);
     QString chatPreview(const Chat &c) const;
     void rebuildChats();
+    void rebuildMessages();
+    void updateHeader();
 
     Ui::MainWindow *m_ui;
 
@@ -61,5 +63,7 @@ private:
 private slots:
     void onUsersReceived(const QJsonArray &users);
     void serverError(const QString &msg);
+    void openChat(qint64 peer);
+    void onHistoryReceived(qint64 peer, const QJsonArray &msgs);
 };
 #endif // MAINWINDOW_H

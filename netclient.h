@@ -18,6 +18,7 @@ public:
     void login(const QString &username, const QString &password);
     void registerUser(const QString &username, const QString &password, const QString &name);
     void requestUsers();
+    void requestHistory(qint64 peer);
 
 private:
     void parse(const QJsonObject &obj);
@@ -41,6 +42,7 @@ signals:
     void authOk(const QJsonObject &user);
     void serverError(const QString &msg);
     void usersReceived(const QJsonArray &users);
+    void historyReceived(qint64 peer, const QJsonArray &msgs);
 };
 
 #endif // NETCLIENT_H

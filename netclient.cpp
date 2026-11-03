@@ -23,6 +23,8 @@ void NetClient::parse(const QJsonObject &obj)
         emit serverError(obj[JSON_FIELDS::F_MSG].toString());
     } else if (type == JSON_MESSEGES::M_USERS) {
         emit usersReceived(obj[JSON_FIELDS::F_LIST].toArray());
+    } else if (type == JSON_MESSEGES::M_HISTORY) {
+        emit historyReceived(obj[JSON_FIELDS::F_PEER].toVariant().toLongLong(), obj[JSON_FIELDS::F_MSGS].toArray());
     }
 }
 
@@ -103,6 +105,14 @@ void NetClient::requestUsers()
 {
     QJsonObject o;
     o[JSON_FIELDS::F_TYPE] = JSON_MESSEGES::M_USERS;
+    send(o);
+}
+
+void NetClient::requestHistory(qint64 peer)
+{
+    QJsonObject o;
+    o[JSON_FIELDS::F_TYPE] = JSON_MESSEGES::M_HISTORY;
+    o[JSON_FIELDS::F_PEER] = (double)peer;
     send(o);
 }
 

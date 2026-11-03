@@ -14,6 +14,9 @@
 #include <QDir>
 #include <QMessageBox>
 
+#include "types.h"
+#include "messagewidget.h"
+
 MainWindow::MainWindow(NetClient *net, const QJsonObject &user, QWidget *parent)
     : QMainWindow(parent)
     , m_ui(new Ui::MainWindow),
@@ -21,8 +24,8 @@ MainWindow::MainWindow(NetClient *net, const QJsonObject &user, QWidget *parent)
 {
     m_ui->setupUi(this);
 
-    m_myId = user["id"].toVariant().toLongLong();
-    m_myName = user["name"].toString();
+    m_myId = user[JSON_FIELDS::F_ID].toVariant().toLongLong();
+    m_myName = user[JSON_FIELDS::F_NAME].toString();
 
     m_filesDir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/files";
     QDir().mkpath(m_filesDir);
@@ -43,19 +46,25 @@ void MainWindow::setupUI()
     resize(980, 620);
     setMinimumSize(760, 480);
 
+    m_ui->attachRow->setVisible(false);
+
     connect(m_net, &NetClient::usersReceived, this, &MainWindow::onUsersReceived);
     connect(m_net, &NetClient::serverError, this, &MainWindow::serverError);
-}
+    connect(m_net, &NetClient::historyReceived, this, &MainWindow::onHistoryReceived);
 
+    connect(m_ui->listWidget_chatList, &QListWidget::itemClicked, this, [this](QListWidgetItem *item){
+        openChat(item->data(Qt::UserRole).toLongLong());
+    });
+}
 
 void MainWindow::onUsersReceived(const QJsonArray &users)
 {
     for (const QJsonValue &v : users) {
         QJsonObject o = v.toObject();
-        addUserEntry(o["id"].toVariant().toLongLong(),
-                     o["name"].toString(),
-                     o["username"].toString(),
-                     o["online"].toBool());
+        addUserEntry(o[JSON_FIELDS::F_ID].toVariant().toLongLong(),
+                     o[JSON_FIELDS::F_NAME].toString(),
+                     o[JSON_FIELDS::F_USERNAME].toString(),
+                     o[JSON_FIELDS::F_ONLINE].toBool());
     }
     rebuildChats();
 }
@@ -120,5 +129,80 @@ QString MainWindow::chatPreview(const Chat &c) const
     if (m.outgoing)
         p = QString("Вы: ") + p;
     return p;
+}
+
+void MainWindow::openChat(qint64 peer)
+{
+    m_current = peer;
+    Chat &c = ensureChat(peer);
+    c.unread = 0;
+    updateHeader();
+    rebuildChats();
+    m_net->requestHistory(peer);
+}
+
+void MainWindow::updateHeader()
+{
+    if (m_current < 0 || !m_chats.contains(m_current))
+        return;
+    const Chat &c = m_chats[m_current];
+    m_ui->headerAvatar->setPixmap(makeAvatar(c.name, c.online, 40));
+    m_ui->headerName->setText(c.name);
+    if (c.online) {
+        m_ui->headerStatus->setText(QString("в сети"));
+        m_ui->headerStatus->setStyleSheet(QString("color:#4fc3f7; font-size:12px; background:transparent;"));
+    } else {
+        m_ui->headerStatus->setText(QString("не в сети"));
+        m_ui->headerStatus->setStyleSheet(QString("color:#7f91a4; font-size:12px; background:transparent;"));
+    }
+}
+
+void MainWindow::onHistoryReceived(qint64 peer, const QJsonArray &msgs)
+{
+    Chat &c = ensureChat(peer);
+    c.msgs.clear();
+    for (const QJsonValue &v : msgs) {
+        QJsonObject o = v.toObject();
+        Message m;
+        m.id = o[JSON_FIELDS::F_TYPE].toVariant().toLongLong();
+        m.from = o[JSON_FIELDS::F_FROM].toVariant().toLongLong();
+        m.outgoing = (m.from == m_myId);
+        m.text = o[JSON_FIELDS::F_TEXT].toString();
+        m.fileName = o[JSON_FIELDS::F_FILENAME].toString();
+        m.hasFile = o[JSON_FIELDS::F_HASFILE].toBool();
+        m.ts = o[JSON_FIELDS::F_TS].toVariant().toLongLong();
+        if (m.outgoing) {
+            if (o[JSON_FIELDS::F_READ].toInt()) m.status = MessageStatus::Readed;
+            else if (o[JSON_FIELDS::F_DELIVERED].toInt()) m.status = MessageStatus::Delivered;
+            else m.status = MessageStatus::Sended;
+        }
+        if (m.hasFile) {
+            QString candidate = m_filesDir + "/" + QString::number(m.id) + "_" + m.fileName;
+            if (QFile::exists(candidate))
+                m.localPath = candidate;
+        }
+        c.msgs.append(m);
+        if (m.ts > c.lastTs) c.lastTs = m.ts;
+    }
+    c.unread = 0;
+    if (m_current == peer)
+        rebuildMessages();
+    rebuildChats();
+}
+
+void MainWindow::rebuildMessages()
+{
+    m_ui->listWidget_msgList->clear();
+    if (m_current < 0 || !m_chats.contains(m_current))
+        return;
+    const Chat &c = m_chats[m_current];
+    for (const Message &m : c.msgs) {
+        QListWidgetItem *item = new QListWidgetItem(m_ui->listWidget_msgList);
+        MessageWidget *w = new MessageWidget(m);
+        item->setSizeHint(w->sizeHint());
+        m_ui->listWidget_msgList->addItem(item);
+        m_ui->listWidget_msgList->setItemWidget(item, w);
+    }
+    m_ui->listWidget_msgList->scrollToBottom();
 }
 
