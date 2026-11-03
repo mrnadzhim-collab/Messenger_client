@@ -19,8 +19,11 @@ SOURCES += \
     netclient.cpp
 
 HEADERS += \
+    avatar.h \
+    chatitemwidget.h \
     loginwindow.h \
     mainwindow.h \
+    messegedata.h \
     netclient.h \
     protocol.h \
     types.h

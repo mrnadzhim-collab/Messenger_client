@@ -21,6 +21,8 @@ void NetClient::parse(const QJsonObject &obj)
         emit authOk(obj[JSON_FIELDS::F_USER].toObject());
     } else if (type == JSON_MESSEGES::M_ERROR) {
         emit serverError(obj[JSON_FIELDS::F_MSG].toString());
+    } else if (type == JSON_MESSEGES::M_USERS) {
+        emit usersReceived(obj[JSON_FIELDS::F_LIST].toArray());
     }
 }
 
@@ -95,5 +97,12 @@ void NetClient::registerUser(const QString &username, const QString &password, c
     o[JSON_FIELDS::F_NAME] = name;
     m_auth = o;
     flushAuth();
+}
+
+void NetClient::requestUsers()
+{
+    QJsonObject o;
+    o[JSON_FIELDS::F_TYPE] = JSON_MESSEGES::M_USERS;
+    send(o);
 }
 

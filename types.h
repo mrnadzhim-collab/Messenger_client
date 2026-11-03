@@ -13,6 +13,7 @@ const QString M_REGISTER        = QString("register");      // регистра�
 const QString M_PRESENCE        = QString("presence");      // статус
 const QString M_PENDING         = QString("pending");       // отправка непрочитанных сообщений
 const QString M_DELIVERED       = QString("delivered");     // сообщение с информированием о доставки сообщения
+const QString M_USERS           = QString("users");         // пользователи
 }
 
 // Описание полей JSON-документа
@@ -36,6 +37,7 @@ const QString F_HASFILE         = QString("has_file");      // признак н
 const QString F_TS              = QString("ts");            // время
 const QString F_DELIVERED       = QString("delivered");     // признак доставки сообщения
 const QString F_READ            = QString("read");          // признак прочтения сообщения
+const QString F_LIST            = QString("list");          // список пользователей
 }
 
 #endif // TYPES_H

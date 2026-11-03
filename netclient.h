@@ -17,6 +17,7 @@ public:
     void connectToServer(const QString &host, quint16 port);
     void login(const QString &username, const QString &password);
     void registerUser(const QString &username, const QString &password, const QString &name);
+    void requestUsers();
 
 private:
     void parse(const QJsonObject &obj);
@@ -39,6 +40,7 @@ signals:
     void connectionFailed(const QString &error);
     void authOk(const QJsonObject &user);
     void serverError(const QString &msg);
+    void usersReceived(const QJsonArray &users);
 };
 
 #endif // NETCLIENT_H
